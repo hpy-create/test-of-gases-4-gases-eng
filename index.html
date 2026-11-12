@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secondary 2 Science - Gas Testing Simulator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            touch-action: manipulation;
+            font-size: 1.15rem;
+            line-height: 1.6;
+        }
+
+        /* Responsive optimization */
+        @media (min-width: 768px) and (max-width: 1200px) {
+            .ipad-container {
+                max-width: 100%;
+                padding: 0.5rem;
+            }
+        }
+        
+        /* Test tube & rack styling */
+        .test-tube-rack {
+            position: relative;
+            height: 295px;
+            display: flex;
+            justify-content: space-evenly;
+            align-items: flex-end;
+            padding-bottom: 24px;
+            margin-top: 8px;
+            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 1rem;
+            border: 2px solid #cbd5e1;
+        }
+
+        /* Wooden rack visual structure */
+        .rack-structure-top {
+            position: absolute;
+            top: 138px;
+            left: 3%;
+            width: 94%;
+            height: 16px;
+            background: #a66e38;
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+
+        .rack-structure-bottom {
+            position: absolute;
+            bottom: 10px;
+            left: 2%;
+            width: 96%;
+            height: 22px;
+            background: #8c5828;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+
+        .rack-pillar-left, .rack-pillar-right {
+            position: absolute;
+            bottom: 25px;
+            width: 18px;
+            height: 142px;
+            background: #73451e;
+            z-index: 4;
+            border-radius: 3px;
+        }
+        .rack-pillar-left { left: 3.5%; }
+        .rack-pillar-right { right: 3.5%; }
+
+        /* Test tube body */
+        .test-tube {
+            width: 52px;
+            height: 175px;
+            border: 3px solid #64748b;
+            border-top: 2px solid #94a3b8;
+            border-radius: 0 0 26px 26px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(224,242,254,0.65) 100%);
+            box-shadow: 0 8px 16px rgba(15,23,42,0.14), inset 0 0 12px rgba(255,255,255,0.95);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Test tube stopper */
+        .test-tube-stopper {
+            position: absolute;
+            top: -17px;
+            left: 50%;
+            transform: translateX(-50%) translateY(0);
+            width: 46px;
+            height: 18px;
+            background: linear-gradient(180deg, #9a5b13 0%, #783f09 100%);
+            border-bottom: 2px solid #5c2e04;
+            border-radius: 5px 5px 2px 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+            z-index: 12;
+            opacity: 1;
+            pointer-events: none;
+        }
+
+        /* Stopper capping bounce animation */
+        @keyframes capCloseBounce {
+            0% {
+                transform: translateX(-50%) translateY(-32px);
+                opacity: 0;
+            }
+            65% {
+                transform: translateX(-50%) translateY(2px);
+                opacity: 1;
+            }
+            85% {
+                transform: translateX(-50%) translateY(-2px);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .stopper-closing {
+            animation: capCloseBounce 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* Test tube liquid animation */
+        .test-tube-liquid {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 0%;
+            border-radius: 0 0 20px 20px;
+            transition: all 0.8s ease;
+            opacity: 0.85;
+        }
+
+        /* Wooden splint and flame */
+        .splint {
+            width: 10px;
+            height: 130px;
+            background: #d97706;
+            border-radius: 3px;
+            position: absolute;
+            transition: all 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 25;
+            pointer-events: none;
+        }
+
+        .flame {
+            width: 20px;
+            height: 32px;
+            background: radial-gradient(circle, #fef08a 20%, #f97316 60%, #dc2626 100%);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: flicker 0.15s infinite alternate;
+            box-shadow: 0 0 12px #f97316;
+            transition: all 0.3s ease;
+        }
+
+        /* Extinguish animation */
+        .flame-extinguish-fast {
+            animation: extinguishFast 0.35s ease-out forwards !important;
+        }
+
+        @keyframes extinguishFast {
+            0% { transform: translateX(-50%) scale(1); opacity: 1; }
+            50% { transform: translateX(-50%) scale(0.4); opacity: 0.6; }
+            100% { transform: translateX(-50%) scale(0); opacity: 0; }
+        }
+
+        /* Hydrogen squeaky pop flash and shockwave */
+        .pop-burst {
+            position: absolute;
+            width: 72px;
+            height: 72px;
+            background: radial-gradient(circle, #ffffff 0%, #fef08a 35%, #f97316 70%, rgba(255,255,255,0) 100%);
+            border-radius: 50%;
+            top: 5px;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.2);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 45;
+        }
+
+        .pop-burst-active {
+            animation: popFlash 0.5s ease-out forwards;
+        }
+
+        .pop-shockwave {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 3px solid #fbbf24;
+            border-radius: 50%;
+            top: 5px;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.3);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 44;
+        }
+
+        .pop-shockwave-active {
+            animation: shockwaveExpand 0.6s ease-out forwards;
+        }
+
+        /* Pop sound badge */
+        .pop-text-badge {
+            position: absolute;
+            top: -42px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.5);
+            background: #dc2626;
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 1.15rem;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            border: 2px solid #fef08a;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.85);
+            opacity: 0;
+            white-space: nowrap;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .pop-text-active {
+            animation: popTextAnim 1.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popFlash {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0.95; }
+            45% { transform: translate(-50%, -50%) scale(1.7); opacity: 1; filter: drop-shadow(0 0 14px #f59e0b); }
+            100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+        }
+
+        @keyframes shockwaveExpand {
+            0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0.9; }
+            100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+        }
+
+        @keyframes popTextAnim {
+            0% { transform: translateX(-50%) scale(0.3) rotate(-6deg); opacity: 0; }
+            25% { transform: translateX(-50%) scale(1.15) rotate(3deg); opacity: 1; }
+            75% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translateX(-50%) scale(0.95) translateY(-8px); opacity: 0; }
+        }
+
+        .ember {
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 8px #ef4444;
+            animation: pulseEmber 0.8s infinite alternate;
+        }
+
+        .smoke {
+            width: 14px;
+            height: 14px;
+            background: rgba(156, 163, 175, 0.75);
+            border-radius: 50%;
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: puffSmoke 1.2s infinite ease-out;
+        }
+
+        @keyframes flicker {
+            0% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+            100% { transform: translateX(-50%) scale(1.1) rotate(2deg); }
+        }
+
+        @keyframes pulseEmber {
+            0% { opacity: 0.6; transform: translateX(-50%) scale(0.9); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+        }
+
+        @keyframes puffSmoke {
+            0% { opacity: 0.8; transform: translateX(-50%) translateY(0) scale(0.8); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-35px) scale(2.5); }
+        }
+
+        /* Dropper styling */
+        .dropper {
+            width: 12px;
+            height: 110px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid #94a3b8;
+            border-radius: 3px;
+            position: absolute;
+            transition: all 0.6s ease;
+            z-index: 30;
+            pointer-events: none;
+        }
+        .dropper-bulb {
+            width: 22px;
+            height: 28px;
+            background: #475569;
+            border-radius: 50% 50% 20% 20%;
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body class="p-3 md:p-6 text-slate-800">
+
+    <div class="max-w-7xl mx-auto space-y-5 ipad-container">
+        
+        <!-- Header & Scenario Intro -->
+        <header class="bg-white p-5 md:p-7 rounded-2xl shadow-md border-l-8 border-blue-600">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Secondary 2 Science: Gas Testing Simulation</h1>
+                    <p class="text-lg md:text-xl text-slate-600 mt-2">Miss Ho has provided four test tubes filled with colorless gases (Gas A, B, C, and D). Use appropriate laboratory apparatus and testing methods to identify which test tube contains <b>Oxygen</b>, <b>Carbon Dioxide</b>, <b>Nitrogen</b>, or <b>Hydrogen</b>.</p>
+                </div>
+                <div id="safety-status" class="bg-amber-100 border border-amber-300 text-amber-800 px-5 py-3 rounded-xl text-lg md:text-xl font-bold flex items-center gap-2 shrink-0">
+                    <span>⚠️ Safety Gear Not On</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Safety Zone -->
+        <section id="safety-zone" class="bg-amber-50 border-2 border-dashed border-amber-300 p-5 md:p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <span class="text-5xl">🥽</span>
+                <div>
+                    <h3 class="font-bold text-xl md:text-2xl text-amber-900">Safety Rules & Fair Test Instructions</h3>
+                    <p class="text-lg md:text-xl text-amber-800 mt-1">1. Safety goggles must be worn before conducting any chemical experiments.<br>2. <b>Fair Test</b>: Gas in each test tube will be consumed after testing. <b>Click "Replace Tube" after each test</b> before performing another test.</p>
+                </div>
+            </div>
+            <button id="wear-goggles-btn" onclick="wearGoggles()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 px-8 rounded-xl shadow transition text-lg md:text-xl whitespace-nowrap active:scale-95">
+                Wear Safety Goggles
+            </button>
+        </section>
+
+        <!-- Main Workbench & Record Sheet Grid -->
+        <div class="space-y-6">
+            
+            <!-- Experimental Workbench -->
+            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-md flex flex-col justify-between relative overflow-visible">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-slate-800 border-b pb-3 mb-3 flex flex-wrap justify-between items-center gap-2">
+                        <span>Experimental Workbench</span>
+                        <span id="fair-test-badge" class="text-base md:text-lg bg-slate-100 text-slate-700 px-3.5 py-1.5 rounded-lg font-semibold">Fair Test: Tubes Ready</span>
+                    </h2>
+                    
+                    <!-- Action / Observation Banner -->
+                    <div class="relative z-30 mb-3">
+                        <div id="action-msg" class="p-4 bg-blue-50 text-blue-950 text-lg md:text-xl rounded-xl font-bold border border-blue-200 shadow-sm leading-relaxed min-h-[76px] flex items-center">
+                            Please click the "Wear Safety Goggles" button above to start the experiment.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Tube Rack Display Area -->
+                <div class="my-2 relative overflow-x-auto pb-2">
+                    <div class="test-tube-rack min-w-[540px]" id="test-tube-rack-area">
+                        
+                        <!-- Wooden Rack Structure -->
+                        <div class="rack-structure-top"></div>
+                        <div class="rack-structure-bottom"></div>
+                        <div class="rack-pillar-left"></div>
+                        <div class="rack-pillar-right"></div>
+                        
+                        <!-- Tube A -->
+                        <div class="flex flex-col items-center gap-1.5 relative z-10 mb-1">
+                            <div id="status-a" class="text-xs md:text-sm font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md border border-emerald-300 shadow-sm mb-5">Fresh Tube</div>
+                            <div class="test-tube cursor-pointer hover:ring-4 hover:ring-blue-300 active:scale-95 transition-all" onclick="selectTube('A')" id="tube-container-A">
+                                <div class="test-tube-stopper" id="stopper-A"></div>
+                                <div class="test-tube-liquid" id="liquid-A"></div>
+                            </div>
+                            <span class="font-bold text-base md:text-lg text-slate-900 bg-white px-3 py-0.5 rounded-md border border-slate-300 shadow-sm">Tube A</span>
+                            <button onclick="resetTube('A')" class="text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-300 px-3 py-1 rounded-lg shadow-sm transition">Replace Tube</button>
+                        </div>
+
+                        <!-- Tube B -->
+                        <div class="flex flex-col items-center gap-1.5 relative z-10 mb-1">
+                            <div id="status-b" class="text-xs md:text-sm font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md border border-emerald-300 shadow-sm mb-5">Fresh Tube</div>
+                            <div class="test-tube cursor-pointer hover:ring-4 hover:ring-blue-300 active:scale-95 transition-all" onclick="selectTube('B')" id="tube-container-B">
+                                <div class="test-tube-stopper" id="stopper-B"></div>
+                                <div class="test-tube-liquid" id="liquid-B"></div>
+                            </div>
+                            <span class="font-bold text-base md:text-lg text-slate-900 bg-white px-3 py-0.5 rounded-md border border-slate-300 shadow-sm">Tube B</span>
+                            <button onclick="resetTube('B')" class="text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-300 px-3 py-1 rounded-lg shadow-sm transition">Replace Tube</button>
+                        </div>
+
+                        <!-- Tube C -->
+                        <div class="flex flex-col items-center gap-1.5 relative z-10 mb-1">
+                            <div id="status-c" class="text-xs md:text-sm font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md border border-emerald-300 shadow-sm mb-5">Fresh Tube</div>
+                            <div class="test-tube cursor-pointer hover:ring-4 hover:ring-blue-300 active:scale-95 transition-all" onclick="selectTube('C')" id="tube-container-C">
+                                <div class="test-tube-stopper" id="stopper-C"></div>
+                                <div class="test-tube-liquid" id="liquid-C"></div>
+                            </div>
+                            <span class="font-bold text-base md:text-lg text-slate-900 bg-white px-3 py-0.5 rounded-md border border-slate-300 shadow-sm">Tube C</span>
+                            <button onclick="resetTube('C')" class="text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-300 px-3 py-1 rounded-lg shadow-sm transition">Replace Tube</button>
+                        </div>
+
+                        <!-- Tube D -->
+                        <div class="flex flex-col items-center gap-1.5 relative z-10 mb-1">
+                            <div id="status-d" class="text-xs md:text-sm font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md border border-emerald-300 shadow-sm mb-5">Fresh Tube</div>
+                            <div class="test-tube cursor-pointer hover:ring-4 hover:ring-blue-300 active:scale-95 transition-all" onclick="selectTube('D')" id="tube-container-D">
+                                <div class="test-tube-stopper" id="stopper-D"></div>
+                                <div class="test-tube-liquid" id="liquid-D"></div>
+                            </div>
+                            <span class="font-bold text-base md:text-lg text-slate-900 bg-white px-3 py-0.5 rounded-md border border-slate-300 shadow-sm">Tube D</span>
+                            <button onclick="resetTube('D')" class="text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-300 px-3 py-1 rounded-lg shadow-sm transition">Replace Tube</button>
+                        </div>
+
+                        <!-- Dynamic Apparatus -->
+                        <div id="anim-splint" class="splint hidden">
+                            <div id="anim-ember" class="ember"></div>
+                            <div id="anim-flame" class="flame"></div>
+                            <div id="anim-smoke" class="smoke"></div>
+                        </div>
+
+                        <!-- Shared Pop Effect Container (moves dynamically to active tube) -->
+                        <div id="anim-pop-container" class="hidden pointer-events-none absolute z-40" style="width: 52px; height: 20px;">
+                            <div class="pop-burst" id="anim-pop-burst"></div>
+                            <div class="pop-shockwave" id="anim-pop-shockwave"></div>
+                            <div class="pop-text-badge" id="anim-pop-text">SQUEAKY POP!</div>
+                        </div>
+
+                        <div id="anim-dropper" class="dropper hidden">
+                            <div class="dropper-bulb"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Testing Tool Selection -->
+                <div class="mt-2">
+                    <h3 class="text-lg md:text-xl font-bold text-slate-800 mb-2">Select Testing Tool:</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <button onclick="prepareTool('burning-splint')" class="tool-btn border-2 border-slate-300 hover:border-blue-500 active:bg-blue-100 p-3 rounded-xl text-base md:text-lg font-bold flex flex-col items-center gap-1 bg-white hover:bg-blue-50 transition shadow-sm">
+                            <span class="text-3xl">🔥</span>
+                            <span>Burning Splint</span>
+                        </button>
+                        <button onclick="prepareTool('ember-splint')" class="tool-btn border-2 border-slate-300 hover:border-blue-500 active:bg-blue-100 p-3 rounded-xl text-base md:text-lg font-bold flex flex-col items-center gap-1 bg-white hover:bg-blue-50 transition shadow-sm">
+                            <span class="text-3xl">🪵</span>
+                            <span>Glowing Splint</span>
+                        </button>
+                        <button onclick="prepareTool('limewater')" class="tool-btn border-2 border-slate-300 hover:border-blue-500 active:bg-blue-100 p-3 rounded-xl text-base md:text-lg font-bold flex flex-col items-center gap-1 bg-white hover:bg-blue-50 transition shadow-sm">
+                            <span class="text-3xl">🧪</span>
+                            <span>Limewater</span>
+                        </button>
+                        <button onclick="prepareTool('bicarbonate')" class="tool-btn border-2 border-slate-300 hover:border-blue-500 active:bg-blue-100 p-3 rounded-xl text-base md:text-lg font-bold flex flex-col items-center gap-1 bg-white hover:bg-blue-50 transition shadow-sm">
+                            <span class="text-3xl">💧</span>
+                            <span>Hydrogencarbonate Indicator</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Experimental Record & Conclusion -->
+            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-md space-y-5">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-slate-800 border-b pb-3 flex items-center justify-between">
+                        <span>Experimental Record</span>
+                        <span class="text-sm font-normal text-slate-500">Record observations clearly for all 4 test tubes</span>
+                    </h2>
+                    
+                    <!-- Record Table -->
+                    <div class="mt-4 overflow-x-auto rounded-xl border-2 border-slate-300 shadow-sm bg-slate-50">
+                        <table class="w-full text-base text-left text-slate-800 border-collapse">
+                            <thead class="bg-slate-100 text-slate-900 uppercase text-sm border-b-2 border-slate-300">
+                                <tr>
+                                    <th class="p-3 border-r border-slate-300 font-bold text-left w-1/5 min-w-[160px]">Testing Method</th>
+                                    <th class="p-3 border-r border-slate-300 font-bold text-center w-[20%] min-w-[150px] bg-blue-100/60">Gas A</th>
+                                    <th class="p-3 border-r border-slate-300 font-bold text-center w-[20%] min-w-[150px] bg-emerald-100/60">Gas B</th>
+                                    <th class="p-3 border-r border-slate-300 font-bold text-center w-[20%] min-w-[150px] bg-amber-100/60">Gas C</th>
+                                    <th class="p-3 font-bold text-center w-[20%] min-w-[150px] bg-purple-100/60">Gas D</th>
+                                </tr>
+                            </thead>
+                            <tbody id="record-table-body" class="bg-white divide-y divide-slate-300">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Inferred Gas Conclusion -->
+                    <div class="mt-5 bg-blue-50 p-4.5 rounded-xl border border-blue-200">
+                        <h3 class="font-bold text-lg md:text-xl text-blue-900 mb-3">Experimental Conclusion:</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-base md:text-lg">
+                            <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
+                                <span class="font-bold text-slate-800">Tube A:</span>
+                                <select id="ans-a" class="p-2 border border-slate-300 rounded-lg bg-white font-bold text-blue-900 text-base">
+                                    <option value="">-- Select --</option>
+                                    <option value="Oxygen">Oxygen</option>
+                                    <option value="Carbon Dioxide">Carbon Dioxide</option>
+                                    <option value="Nitrogen">Nitrogen</option>
+                                    <option value="Hydrogen">Hydrogen</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
+                                <span class="font-bold text-slate-800">Tube B:</span>
+                                <select id="ans-b" class="p-2 border border-slate-300 rounded-lg bg-white font-bold text-blue-900 text-base">
+                                    <option value="">-- Select --</option>
+                                    <option value="Oxygen">Oxygen</option>
+                                    <option value="Carbon Dioxide">Carbon Dioxide</option>
+                                    <option value="Nitrogen">Nitrogen</option>
+                                    <option value="Hydrogen">Hydrogen</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
+                                <span class="font-bold text-slate-800">Tube C:</span>
+                                <select id="ans-c" class="p-2 border border-slate-300 rounded-lg bg-white font-bold text-blue-900 text-base">
+                                    <option value="">-- Select --</option>
+                                    <option value="Oxygen">Oxygen</option>
+                                    <option value="Carbon Dioxide">Carbon Dioxide</option>
+                                    <option value="Nitrogen">Nitrogen</option>
+                                    <option value="Hydrogen">Hydrogen</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm">
+                                <span class="font-bold text-slate-800">Tube D:</span>
+                                <select id="ans-d" class="p-2 border border-slate-300 rounded-lg bg-white font-bold text-blue-900 text-base">
+                                    <option value="">-- Select --</option>
+                                    <option value="Oxygen">Oxygen</option>
+                                    <option value="Carbon Dioxide">Carbon Dioxide</option>
+                                    <option value="Nitrogen">Nitrogen</option>
+                                    <option value="Hydrogen">Hydrogen</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex gap-4">
+                    <button onclick="submitAnswer()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-5 rounded-xl shadow-md transition text-xl">
+                        Submit Answer
+                    </button>
+                    <button onclick="resetAll()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 px-6 rounded-xl transition text-xl">
+                        Reset All
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 md:p-8 shadow-2xl space-y-4">
+            <h3 id="modal-title" class="text-2xl md:text-3xl font-bold text-slate-900"></h3>
+            <p id="modal-msg" class="text-lg md:text-xl text-slate-700 leading-relaxed"></p>
+            <div id="modal-details" class="bg-slate-50 p-4 rounded-xl text-base md:text-lg space-y-2 border border-slate-200"></div>
+            <button onclick="closeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-lg md:text-xl transition">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const gases = ['Oxygen', 'Carbon Dioxide', 'Nitrogen', 'Hydrogen'];
+        let tubeGas = { A: '', B: '', C: '', D: '' };
+        let tubeUsed = { A: false, B: false, C: false, D: false };
+        let tubeTimers = { A: [], B: [], C: [], D: [] };
+        let gogglesOn = false;
+        let selectedTool = null;
+
+        // Build 4 rows in the experimental record table
+        function buildRecordTable() {
+            const tbody = document.getElementById('record-table-body');
+            if (!tbody) return;
+            let html = '';
+            const tubes = [
+                { id: 'a', bg: 'bg-blue-50/20' },
+                { id: 'b', bg: 'bg-emerald-50/20' },
+                { id: 'c', bg: 'bg-amber-50/20' },
+                { id: 'd', bg: 'bg-purple-50/20' }
+            ];
+            for (let i = 1; i <= 4; i++) {
+                html += `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-2.5 border-r border-slate-300 font-bold align-middle">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-slate-500">${i}.</span>
+                            <select id="test-method-${i}" class="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">-- Select Test --</option>
+                                <option value="Glowing Splint">Glowing Splint</option>
+                                <option value="Burning Splint">Burning Splint</option>
+                                <option value="Limewater">Limewater</option>
+                                <option value="Hydrogencarbonate Indicator">Hydrogencarbonate Indicator</option>
+                            </select>
+                        </div>
+                    </td>`;
+                tubes.forEach((t, idx) => {
+                    const borderClass = idx < tubes.length - 1 ? 'border-r border-slate-300' : '';
+                    html += `
+                            <td class="p-2 ${borderClass} ${t.bg} align-middle">
+                                <select id="res-${i}-${t.id}" onchange="highlightSelected(this)" class="w-full p-2 border border-slate-300 rounded-lg bg-white text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">-- Select --</option>
+                                    <option value="Splint relights">Splint relights</option>
+                                    <option value="Burns with a 'pop' sound">Burns with a "pop" sound</option>
+                                    <option value="Burns more brightly">Burns more brightly</option>
+                                    <option value="Flame goes out">Flame goes out</option>
+                                    <option value="Limewater turns milky">Limewater turns milky</option>
+                                    <option value="Indicator turns yellow">Indicator turns from red to yellow</option>
+                                    <option value="No observable change">No observable change</option>
+                                </select>
+                            </td>`;
+                });
+                html += `</tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Highlight recorded observation dropdowns so filled entries stand out clearly
+        function highlightSelected(selectElem) {
+            if (selectElem.value !== "") {
+                selectElem.classList.remove('bg-white', 'text-slate-700', 'border-slate-300');
+                selectElem.classList.add('bg-blue-50', 'text-blue-900', 'border-blue-400', 'font-bold');
+            } else {
+                selectElem.classList.remove('bg-blue-50', 'text-blue-900', 'border-blue-400', 'font-bold');
+                selectElem.classList.add('bg-white', 'text-slate-700', 'border-slate-300');
+            }
+        }
+
+        // Synthesize squeaky pop sound
+        function playPopSound() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(580, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(75, ctx.currentTime + 0.14);
+                
+                gain.gain.setValueAtTime(0.95, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.14);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.14);
+            } catch (e) {
+                // Ignore autoplay policies
+            }
+        }
+
+        function clearTubeTimers(tubeId) {
+            if (tubeTimers[tubeId]) {
+                tubeTimers[tubeId].forEach(id => clearTimeout(id));
+                tubeTimers[tubeId] = [];
+            }
+        }
+
+        function clearAllGlobalAnimations() {
+            ['A', 'B', 'C', 'D'].forEach(id => clearTubeTimers(id));
+            const splint = document.getElementById('anim-splint');
+            const flame = document.getElementById('anim-flame');
+            const ember = document.getElementById('anim-ember');
+            const smoke = document.getElementById('anim-smoke');
+            const popContainer = document.getElementById('anim-pop-container');
+            const popBurst = document.getElementById('anim-pop-burst');
+            const popShockwave = document.getElementById('anim-pop-shockwave');
+            const popText = document.getElementById('anim-pop-text');
+
+            if (splint) {
+                splint.classList.add('hidden');
+                splint.style.transform = 'translateY(0)';
+                splint.style.opacity = '1';
+            }
+            if (flame) {
+                flame.style.display = 'none';
+                flame.classList.remove('flame-extinguish-fast');
+                flame.style.transform = 'translateX(-50%)';
+            }
+            if (ember) ember.style.display = 'none';
+            if (smoke) smoke.style.display = 'none';
+            if (popContainer) popContainer.classList.add('hidden');
+            if (popBurst) popBurst.classList.remove('pop-burst-active');
+            if (popShockwave) popShockwave.classList.remove('pop-shockwave-active');
+            if (popText) popText.classList.remove('pop-text-active');
+        }
+
+        function initSimulator() {
+            buildRecordTable();
+            clearAllGlobalAnimations();
+            const shuffled = [...gases].sort(() => Math.random() - 0.5);
+            tubeGas.A = shuffled[0];
+            tubeGas.B = shuffled[1];
+            tubeGas.C = shuffled[2];
+            tubeGas.D = shuffled[3];
+
+            tubeUsed = { A: false, B: false, C: false, D: false };
+            selectedTool = null;
+            updateTubeUI();
+
+            // Ensure stoppers are sealed centrally above each tube
+            ['A', 'B', 'C', 'D'].forEach(id => {
+                const stopper = document.getElementById(`stopper-${id}`);
+                if (stopper) {
+                    stopper.classList.remove('stopper-closing');
+                    stopper.style.transform = "translateX(-50%) translateY(0)";
+                    stopper.style.opacity = "1";
+                }
+            });
+            
+            document.getElementById('action-msg').innerText = gogglesOn 
+                ? "Please select a testing tool below, then click the target test tube." 
+                : "Please click the 'Wear Safety Goggles' button above to start the experiment.";
+        }
+
+        function wearGoggles() {
+            gogglesOn = true;
+            document.getElementById('safety-status').className = "bg-emerald-100 border border-emerald-300 text-emerald-800 px-5 py-3 rounded-xl text-lg md:text-xl font-bold flex items-center gap-2";
+            document.getElementById('safety-status').innerHTML = "<span>🥽 Safety Goggles On</span>";
+            document.getElementById('safety-zone').classList.add('hidden');
+            document.getElementById('action-msg').innerText = "Safety goggles put on! Now select a testing tool below.";
+        }
+
+        function prepareTool(tool) {
+            if (!gogglesOn) {
+                showAlert("Safety Notice", "Please put on safety goggles first for laboratory safety!");
+                return;
+            }
+
+            selectedTool = tool;
+            let toolName = "";
+            if (tool === 'burning-splint') toolName = "Burning Splint";
+            if (tool === 'ember-splint') toolName = "Glowing Splint";
+            if (tool === 'limewater') toolName = "Limewater";
+            if (tool === 'bicarbonate') toolName = "Hydrogencarbonate Indicator";
+
+            document.getElementById('action-msg').innerText = `Tool selected: "${toolName}". Click a test tube (A, B, C, or D) to test.`;
+        }
+
+        function selectTube(tubeId) {
+            if (!gogglesOn) {
+                showAlert("Safety Notice", "Please put on safety goggles first!");
+                return;
+            }
+
+            if (!selectedTool) {
+                document.getElementById('action-msg').innerText = "Please select a testing tool below first!";
+                return;
+            }
+
+            if (tubeUsed[tubeId]) {
+                showAlert("Fair Test Warning", `Test tube ${tubeId} has already been used! Following fair test rules, click "Replace Tube" before testing again.`);
+                return;
+            }
+
+            executeTest(tubeId, selectedTool);
+        }
+
+        function executeTest(tubeId, tool) {
+            clearAllGlobalAnimations();
+            const gas = tubeGas[tubeId];
+            tubeUsed[tubeId] = true;
+            updateTubeUI();
+
+            // Unstopper: move upwards while keeping horizontal alignment
+            const stopper = document.getElementById(`stopper-${tubeId}`);
+            if (stopper) {
+                stopper.classList.remove('stopper-closing');
+                stopper.style.transform = "translateX(-50%) translateY(-35px)";
+                stopper.style.opacity = "0";
+            }
+
+            if (tool === 'burning-splint' || tool === 'ember-splint') {
+                runSplintTest(tubeId, gas, tool);
+            } else {
+                runLiquidTest(tubeId, gas, tool);
+            }
+        }
+
+        function runSplintTest(tubeId, gas, tool) {
+            const splint = document.getElementById('anim-splint');
+            const flame = document.getElementById('anim-flame');
+            const ember = document.getElementById('anim-ember');
+            const smoke = document.getElementById('anim-smoke');
+            const popContainer = document.getElementById('anim-pop-container');
+            const popBurst = document.getElementById('anim-pop-burst');
+            const popShockwave = document.getElementById('anim-pop-shockwave');
+            const popText = document.getElementById('anim-pop-text');
+            
+            const rackArea = document.getElementById('test-tube-rack-area');
+            const tubeObj = document.getElementById(`tube-container-${tubeId}`);
+
+            flame.style.display = 'none';
+            flame.classList.remove('flame-extinguish-fast');
+            flame.style.transform = 'translateX(-50%)';
+            ember.style.display = 'none';
+            smoke.style.display = 'none';
+            popContainer.classList.add('hidden');
+            popBurst.classList.remove('pop-burst-active');
+            popShockwave.classList.remove('pop-shockwave-active');
+            popText.classList.remove('pop-text-active');
+            
+            splint.style.transform = 'translateY(0)';
+            splint.style.opacity = '1';
+            splint.classList.remove('hidden');
+
+            if (tool === 'ember-splint') {
+                ember.style.display = 'block';
+            } else {
+                flame.style.display = 'block';
+            }
+
+            const rackRect = rackArea.getBoundingClientRect();
+            const tubeRect = tubeObj.getBoundingClientRect();
+
+            const leftOffset = (tubeRect.left - rackRect.left) + (tubeRect.width / 2) - 5;
+            const topOffset = (tubeRect.top - rackRect.top) - 130;
+
+            splint.style.left = `${leftOffset}px`;
+            splint.style.top = `${topOffset}px`;
+
+            // Position the pop effect container directly over the active test tube mouth
+            popContainer.style.left = `${tubeRect.left - rackRect.left}px`;
+            popContainer.style.top = `${tubeRect.top - rackRect.top}px`;
+            
+            const t1 = setTimeout(() => {
+                if (gas === 'Hydrogen' && tool === 'burning-splint') {
+                    splint.style.transform = "translateY(105px)";
+                } else {
+                    splint.style.transform = "translateY(125px)";
+                }
+            }, 60);
+
+            const t2 = setTimeout(() => {
+                let msg = "";
+                if (gas === 'Oxygen') {
+                    if (tool === 'ember-splint') {
+                        ember.style.display = 'none';
+                        flame.style.display = 'block';
+                        msg = `Observation (Tube ${tubeId}): The glowing splint [relights with a bright flame] inside the test tube!`;
+                    } else {
+                        flame.style.display = 'block';
+                        flame.style.transform = "translateX(-50%) scale(1.45)";
+                        msg = `Observation (Tube ${tubeId}): The burning splint [burns more brightly] inside the test tube!`;
+                    }
+                } else if (gas === 'Hydrogen') {
+                    if (tool === 'burning-splint') {
+                        popContainer.classList.remove('hidden');
+                        void popContainer.offsetWidth; // force reflow so animation plays cleanly
+                        popBurst.classList.add('pop-burst-active');
+                        popShockwave.classList.add('pop-shockwave-active');
+                        popText.classList.add('pop-text-active');
+                        playPopSound();
+
+                        const tPop = setTimeout(() => {
+                            flame.classList.add('flame-extinguish-fast');
+                            const tSmoke = setTimeout(() => {
+                                flame.style.display = 'none';
+                                smoke.style.display = 'block';
+                            }, 320);
+                            tubeTimers[tubeId].push(tSmoke);
+                        }, 220);
+                        tubeTimers[tubeId].push(tPop);
+
+                        msg = `Observation (Tube ${tubeId}): The burning splint near the mouth of the test tube [burns with a "pop" sound] and the flame quickly goes out!`;
+                    } else {
+                        ember.style.display = 'none';
+                        smoke.style.display = 'block';
+                        msg = `Observation (Tube ${tubeId}): The glowing splint [goes out immediately] upon entering the test tube!`;
+                    }
+                } else if (gas === 'Carbon Dioxide' || gas === 'Nitrogen') {
+                    if (tool === 'burning-splint') {
+                        flame.classList.add('flame-extinguish-fast');
+                        const tSmoke = setTimeout(() => {
+                            flame.style.display = 'none';
+                            ember.style.display = 'none';
+                            smoke.style.display = 'block';
+                        }, 300);
+                        tubeTimers[tubeId].push(tSmoke);
+                        msg = `Observation (Tube ${tubeId}): The burning splint [flame rapidly goes out] inside the test tube!`;
+                    } else {
+                        flame.style.display = 'none';
+                        ember.style.display = 'none';
+                        smoke.style.display = 'block';
+                        msg = `Observation (Tube ${tubeId}): The glowing splint [goes out immediately] inside the test tube!`;
+                    }
+                }
+
+                document.getElementById('action-msg').innerText = msg;
+
+                const t3 = setTimeout(() => {
+                    splint.style.transform = "translateY(-20px)";
+                    splint.style.opacity = "0.2";
+                    const t4 = setTimeout(() => {
+                        splint.classList.add('hidden');
+                        resetStopper(tubeId, true);
+                    }, 550);
+                    tubeTimers[tubeId].push(t4);
+                }, 2300);
+                tubeTimers[tubeId].push(t3);
+
+            }, 950);
+
+            tubeTimers[tubeId].push(t1, t2);
+        }
+
+        function runLiquidTest(tubeId, gas, tool) {
+            const liquid = document.getElementById(`liquid-${tubeId}`);
+            let msg = "";
+
+            if (tool === 'limewater') {
+                liquid.style.height = "40%";
+                liquid.style.backgroundColor = "rgba(226, 232, 240, 0.55)";
+
+                const t1 = setTimeout(() => {
+                    if (gas === 'Carbon Dioxide') {
+                        liquid.style.backgroundColor = "rgba(255, 255, 255, 0.96)";
+                        msg = `Observation (Tube ${tubeId}): Limewater [turns milky]!`;
+                    } else {
+                        msg = `Observation (Tube ${tubeId}): Limewater [remains clear with no observable change].`;
+                    }
+                    document.getElementById('action-msg').innerText = msg;
+                    const t2 = setTimeout(() => resetStopper(tubeId, true), 1500);
+                    tubeTimers[tubeId].push(t2);
+                }, 800);
+                tubeTimers[tubeId].push(t1);
+
+            } else if (tool === 'bicarbonate') {
+                liquid.style.height = "40%";
+                liquid.style.backgroundColor = "rgba(239, 68, 68, 0.8)";
+
+                const t1 = setTimeout(() => {
+                    if (gas === 'Carbon Dioxide') {
+                        liquid.style.backgroundColor = "rgba(234, 179, 8, 0.92)";
+                        msg = `Observation (Tube ${tubeId}): Hydrogencarbonate indicator turns from red to [yellow].`;
+                    } else {
+                        msg = `Observation (Tube ${tubeId}): Hydrogencarbonate indicator [remains red with no observable change].`;
+                    }
+                    document.getElementById('action-msg').innerText = msg;
+                    const t2 = setTimeout(() => resetStopper(tubeId, true), 1500);
+                    tubeTimers[tubeId].push(t2);
+                }, 800);
+                tubeTimers[tubeId].push(t1);
+            }
+        }
+
+        // Reset stopper with centered top placement and bounce effect
+        function resetStopper(tubeId, withBounce = true) {
+            const stopper = document.getElementById(`stopper-${tubeId}`);
+            if (!stopper) return;
+
+            stopper.classList.remove('stopper-closing');
+            void stopper.offsetWidth; // force reflow
+
+            if (withBounce) {
+                stopper.classList.add('stopper-closing');
+            }
+            stopper.style.transform = "translateX(-50%) translateY(0)";
+            stopper.style.opacity = "1";
+        }
+
+        // Replace tube for fair test
+        function resetTube(tubeId) {
+            clearTubeTimers(tubeId);
+            tubeUsed[tubeId] = false;
+
+            const liquid = document.getElementById(`liquid-${tubeId}`);
+            if (liquid) {
+                liquid.style.height = "0%";
+            }
+
+            const splint = document.getElementById('anim-splint');
+            if (splint) {
+                splint.classList.add('hidden');
+            }
+
+            resetStopper(tubeId, true);
+            updateTubeUI();
+            document.getElementById('action-msg').innerText = `Tube ${tubeId} has been replaced with a fresh sealed tube. Ready for a fair test.`;
+        }
+
+        function updateTubeUI() {
+            ['A', 'B', 'C', 'D'].forEach(id => {
+                const statusElem = document.getElementById(`status-${id.toLowerCase()}`);
+                if (statusElem) {
+                    if (tubeUsed[id]) {
+                        statusElem.innerText = "Used (Needs Replace)";
+                        statusElem.className = "text-xs md:text-sm font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-md border border-amber-300 shadow-sm mb-5";
+                    } else {
+                        statusElem.innerText = "Fresh Tube";
+                        statusElem.className = "text-xs md:text-sm font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md border border-emerald-300 shadow-sm mb-5";
+                    }
+                }
+            });
+        }
+
+        function submitAnswer() {
+            const ansA = document.getElementById('ans-a').value;
+            const ansB = document.getElementById('ans-b').value;
+            const ansC = document.getElementById('ans-c').value;
+            const ansD = document.getElementById('ans-d').value;
+
+            if (!ansA || !ansB || !ansC || !ansD) {
+                showAlert("Incomplete Form", "Please select your inferred gas conclusions for Tubes A, B, C, and D!");
+                return;
+            }
+
+            const isCorrect = (ansA === tubeGas.A && ansB === tubeGas.B && ansC === tubeGas.C && ansD === tubeGas.D);
+
+            const modalTitle = document.getElementById('modal-title');
+            const modalMsg = document.getElementById('modal-msg');
+            const modalDetails = document.getElementById('modal-details');
+
+            if (isCorrect) {
+                modalTitle.innerText = "🎉 Congratulations! All Answers Correct!";
+                modalTitle.className = "text-2xl font-bold text-emerald-600";
+                modalMsg.innerText = "Excellent work applying the scientific method and fair testing principles to identify all four gases!";
+            } else {
+                modalTitle.innerText = "❌ Incorrect Conclusions";
+                modalTitle.className = "text-2xl font-bold text-rose-600";
+                modalMsg.innerText = "Some gas inferences were incorrect. Review the analysis below and try again:";
+            }
+
+            modalDetails.innerHTML = `
+                <p class="font-bold border-b pb-1">Experimental Solution Breakdown:</p>
+                <p>• <b>Tube A (${tubeGas.A})</b>: ${getGasReason(tubeGas.A)}</p>
+                <p>• <b>Tube B (${tubeGas.B})</b>: ${getGasReason(tubeGas.B)}</p>
+                <p>• <b>Tube C (${tubeGas.C})</b>: ${getGasReason(tubeGas.C)}</p>
+                <p>• <b>Tube D (${tubeGas.D})</b>: ${getGasReason(tubeGas.D)}</p>
+            `;
+
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        function getGasReason(gas) {
+            if (gas === 'Oxygen') return 'Relights a glowing splint (supports combustion).';
+            if (gas === 'Hydrogen') return 'Burns with a "pop" sound when tested with a burning splint.';
+            if (gas === 'Carbon Dioxide') return 'Flame goes out and turns limewater milky.';
+            if (gas === 'Nitrogen') return 'Flame goes out but does not turn limewater milky.';
+        }
+
+        function showAlert(title, msg) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-title').className = "text-2xl font-bold text-slate-800";
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-details').innerHTML = "";
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('result-modal').classList.add('hidden');
+        }
+
+        function resetAll() {
+            for (let i = 1; i <= 4; i++) {
+                const methodElem = document.getElementById(`test-method-${i}`);
+                if (methodElem) methodElem.value = "";
+                ['a', 'b', 'c', 'd'].forEach(tube => {
+                    const resElem = document.getElementById(`res-${i}-${tube}`);
+                    if (resElem) {
+                        resElem.value = "";
+                        highlightSelected(resElem);
+                    }
+                });
+            }
+            ['ans-a', 'ans-b', 'ans-c', 'ans-d'].forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) elem.value = "";
+            });
+            ['A', 'B', 'C', 'D'].forEach(id => resetTube(id));
+            initSimulator();
+        }
+
+        window.onload = initSimulator;
+    </script>
+</body>
+</html>
